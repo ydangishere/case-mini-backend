@@ -10,7 +10,9 @@ import org.springframework.transaction.annotation.Transactional;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * CASE SERVICE - Updated với OUTBOX PATTERN
@@ -123,6 +125,15 @@ public class CaseService {
         return createCase(request, null);
     }
     
+    /**
+     * LIST ALL CASES (for GET /api/cases)
+     */
+    public List<CaseResponse> listAll() {
+        return repository.findAll().stream()
+            .map(CaseResponse::from)
+            .collect(Collectors.toList());
+    }
+
     /**
      * GET CASE WITH READ-THROUGH CACHE
      * 

@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
  * - Quản lý thông tin người trong hệ thống
  * - Validate assignee khi tạo case
  * - Separated database từ Case service (microservices pattern)
- * 
+ * a
  * 🏗️ TRONG MICROSERVICES:
  * - Mỗi service có DB riêng → không thể join trực tiếp với cases table
  * - Communication qua API calls hoặc events

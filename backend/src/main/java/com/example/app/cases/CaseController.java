@@ -7,67 +7,52 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
-import java.net.URI;
+import java.util.List;
+import java.util.Optional;
 
 /**
- * CASE CONTROLLER - Updated with Microservices Support
- * 
- * 🎯 NEW: Accept assigneeId parameter for microservices flow
+ * REST controller for /api/cases.
+ * - GET /api/cases → list all (for screenshot: URL + 200 + JSON)
+ * - GET /api/cases/{id} → get one
+ * - POST /api/cases?assigneeId=... → create (assigneeId optional)
  */
 @RestController
 @RequestMapping("/api/cases")
 public class CaseController {
+
     private final CaseService caseService;
 
     public CaseController(CaseService caseService) {
         this.caseService = caseService;
     }
 
-    /**
-     * Create case với microservices support
-     * - Accept assigneeId để validate qua People Service
-     */
-    @PostMapping
-    public ResponseEntity<CaseResponse> createCase(
-            @Valid @RequestBody CreateCaseRequest request,
-            @RequestParam(required = false) Long assigneeId,
-            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
-        
-        CaseResponse response = caseService.createCaseWithMicroservices(request, assigneeId, idempotencyKey);
-        
-        URI location = ServletUriComponentsBuilder
-            .fromCurrentRequest()
-            .path("/{id}")
-            .buildAndExpand(response.getId())
-            .toUri();
-        
-        return ResponseEntity.created(location).body(response);
+    @GetMapping
+    public List<CaseResponse> list() {
+        return caseService.listAll();
     }
 
-    /**
-     * Get case by ID - WITH READ-THROUGH CACHE
-     */
     @GetMapping("/{id}")
-    public ResponseEntity<CaseResponse> getCaseById(@PathVariable Long id) {
-        return caseService.getCaseById(id)
-            .map(ResponseEntity::ok)
+    public ResponseEntity<CaseResponse> getById(@PathVariable Long id) {
+        Optional<CaseResponse> opt = caseService.getCaseById(id);
+        return opt.map(ResponseEntity::ok)
             .orElse(ResponseEntity.notFound().build());
     }
-    
-    /**
-     * Update case status - WITH CACHE INVALIDATION
-     */
-    @PatchMapping("/{id}/status")
-    public ResponseEntity<CaseResponse> updateCaseStatus(@PathVariable Long id, 
-                                                        @RequestParam String status) {
+
+    @PostMapping
+    public ResponseEntity<?> create(
+            @Valid @RequestBody CreateCaseRequest request,
+            @RequestParam(required = false) Long assigneeId,
+            @RequestParam(required = false) String idempotencyKey) {
         try {
-            CaseResponse updated = caseService.updateCaseStatus(id, status);
-            return ResponseEntity.ok(updated);
-        } catch (RuntimeException e) {
-            if (e.getMessage().contains("not found")) {
-                return ResponseEntity.notFound().build();
-            }
-            return ResponseEntity.badRequest().build();
+            CaseResponse created = caseService.createCaseWithMicroservices(request, assigneeId, idempotencyKey);
+            var location = ServletUriComponentsBuilder.fromCurrentRequest()
+                .path("/{id}").buildAndExpand(created.getId()).toUri();
+            return ResponseEntity.created(location).body(created);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                .body(new ErrorBody("bad_request", e.getMessage()));
         }
     }
+
+    public record ErrorBody(String error, String message) {}
 }

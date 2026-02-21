@@ -19,7 +19,7 @@ public class CreateCaseRequest {
     // Constructors
     public CreateCaseRequest() {}
     
-    public CreateCaseRequest(String title, String status) {
+    public CreateCaseRequest(String title, String description, String status) {
         this.title = title;
         this.status = status;
     }
